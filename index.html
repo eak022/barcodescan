@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS System - Add Product</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <style>
+        #scanner {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            max-width: 300px;
+            margin: auto;
+        }
+        input, button {
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Add Product</h1>
+    <div id="scanner"></div>
+    <form id="productForm">
+        <label>Barcode:</label>
+        <input type="text" id="barcode" readonly required>
+        <label>Product Name:</label>
+        <input type="text" id="name" required>
+        <label>Price:</label>
+        <input type="number" id="price" step="0.01" required>
+        <button type="submit">Save</button>
+    </form>
+
+    <script>
+        // เริ่มต้น QuaggaJS
+        Quagga.init({
+            inputStream: {
+                name: "Live",
+                type: "LiveStream",
+                target: document.querySelector('#scanner') // กล้องจะถูกแสดงใน div นี้
+            },
+            decoder: {
+                readers: ["ean_reader", "code_128_reader"] // รองรับบาร์โค้ด EAN และ Code 128
+            }
+        }, (err) => {
+            if (err) {
+                console.error(err);
+                return;
+            }
+            Quagga.start();
+        });
+
+        // เมื่อเจอบาร์โค้ด
+        Quagga.onDetected(data => {
+            document.getElementById('barcode').value = data.codeResult.code;
+            Quagga.stop(); // หยุดการสแกนเมื่อเจอบาร์โค้ด
+        });
+
+        // บันทึกข้อมูลสินค้า
+        const form = document.getElementById('productForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const barcode = document.getElementById('barcode').value;
+            const name = document.getElementById('name').value;
+            const price = document.getElementById('price').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/api/products', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode, name, price })
+                });
+
+                if (response.ok) {
+                    alert('Product added successfully!');
+                    form.reset(); // ล้างฟอร์ม
+                } else {
+                    alert('Error adding product');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error connecting to server');
+            }
+        });
+    </script>
+</body>
+</html>
